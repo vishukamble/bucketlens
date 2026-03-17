@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BucketLens — self-hosting</title>
+<meta name="description" content="Self-hosting and team deployment guide for BucketLens.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #06060e;
+    --bg-secondary: #0d0d1a;
+    --bg-tertiary: #13132a;
+    --border: #1e1e3f;
+    --border-accent: #7c3aed;
+    --accent: #7c3aed;
+    --accent-light: #a78bfa;
+    --green: #00ff88;
+    --danger: #ff2d55;
+    --warning: #ffb800;
+    --text-primary: #e8e8ff;
+    --text-secondary: #7878aa;
+    --text-muted: #444466;
+    --mono: 'JetBrains Mono', monospace;
+    --code: 'Fira Code', monospace;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--mono);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    padding: 0 24px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0;
+  }
+
+  .nav-logo {
+    font-family: var(--mono); font-weight: 700; font-size: 16px;
+    color: var(--text-primary); text-decoration: none; letter-spacing: -0.5px;
+  }
+
+  .nav-links { display: flex; align-items: center; gap: 24px; }
+
+  .nav-link {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-secondary); text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-link:hover { color: var(--text-primary); }
+  .nav-link.active { color: var(--accent-light); border-bottom: 1px solid var(--accent); padding-bottom: 2px; }
+
+  .nav-right { display: flex; align-items: center; gap: 20px; }
+
+  .nav-github {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-secondary); text-decoration: none; transition: color 0.15s;
+  }
+  .nav-github:hover { color: var(--text-primary); }
+
+  .pip-pill {
+    font-family: var(--code); font-size: 12px;
+    background: var(--bg-tertiary); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 14px; color: var(--accent-light);
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .pip-pill:hover { border-color: var(--border-accent); color: var(--text-primary); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 80px 24px 60px;
+    max-width: 1100px; margin: 0 auto;
+    text-align: center;
+  }
+
+  h1 {
+    font-family: var(--mono); font-size: 48px; font-weight: 700;
+    line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 20px;
+  }
+
+  .hero-sub {
+    font-family: var(--code); font-size: 14px;
+    color: var(--text-muted); line-height: 1.9;
+  }
+
+  /* ── Warning banner ── */
+  .warning-banner-wrap {
+    padding: 0 24px; margin-bottom: 0;
+  }
+
+  .warning-banner {
+    max-width: 1100px; margin: 0 auto;
+    background: rgba(255, 45, 85, 0.07);
+    border-left: 3px solid var(--danger);
+    border-radius: var(--radius);
+    padding: 18px 24px;
+    font-family: var(--code); font-size: 13px;
+    color: var(--warning); line-height: 1.8;
+  }
+
+  /* ── Section base ── */
+  section { padding: 60px 0; }
+  .section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  .section-title {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 28px; text-align: center;
+  }
+
+  /* ── Code blocks ── */
+  .code-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-primary); line-height: 2;
+    max-width: 680px; margin: 0 auto 16px;
+    white-space: pre; overflow-x: auto;
+    cursor: text; user-select: all;
+  }
+  .code-block .comment { color: var(--text-muted); }
+  .code-block .key { color: var(--accent-light); }
+
+  .code-block-full {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-primary); line-height: 1.8;
+    margin-bottom: 16px;
+    white-space: pre; overflow-x: auto;
+    cursor: text; user-select: all;
+  }
+  .code-block-full .comment { color: var(--text-muted); }
+  .code-block-full .key { color: var(--accent-light); }
+  .code-block-full .str { color: var(--green); }
+
+  /* ── Step rows ── */
+  .step-row {
+    display: grid; grid-template-columns: 48px 1fr;
+    gap: 24px; margin-bottom: 40px; align-items: start;
+  }
+
+  .step-num-badge {
+    font-family: var(--code); font-size: 11px;
+    color: var(--text-muted); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 8px; text-align: center;
+    white-space: nowrap; margin-top: 2px;
+  }
+
+  .step-content {}
+
+  .step-heading {
+    font-family: var(--mono); font-size: 15px; font-weight: 600;
+    color: var(--text-primary); margin-bottom: 12px;
+  }
+
+  .step-desc {
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary); line-height: 1.7; margin-bottom: 12px;
+  }
+
+  /* ── Auth card ── */
+  .auth-callout {
+    border-left: 2px solid var(--accent);
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    padding: 18px 24px;
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary); line-height: 1.7;
+    margin-bottom: 24px; max-width: 680px;
+  }
+
+  /* ── Env table ── */
+  .env-table {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    font-family: var(--code); font-size: 13px;
+    max-width: 680px; margin: 0 auto;
+  }
+
+  .env-row {
+    display: grid; grid-template-columns: 240px 120px 1fr;
+    gap: 16px; padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .env-row:last-child { border-bottom: none; }
+  .env-row .env-key { color: var(--accent-light); }
+  .env-row .env-val { color: var(--green); }
+  .env-row .env-desc { color: var(--text-muted); }
+
+  /* ── Note ── */
+  .note {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted); margin-top: 8px; line-height: 1.6;
+    max-width: 680px;
+  }
+
+  .vpn-note {
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary); line-height: 1.7;
+    margin-top: 16px; max-width: 680px;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 0 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .footer-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 0; flex-wrap: wrap; gap: 12px;
+  }
+
+  footer a { color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+  footer a:hover { color: var(--text-primary); }
+  .footer-right { display: flex; align-items: center; gap: 16px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .nav-inner { padding: 14px 0; }
+    .pip-pill { display: none; }
+    .nav-links { gap: 16px; }
+    .hero { padding: 60px 20px 40px; }
+    h1 { font-size: 32px; }
+    section { padding: 40px 0; }
+    .section-inner { padding: 0 20px; }
+    .warning-banner-wrap { padding: 0 20px; }
+    .step-row { grid-template-columns: 1fr; gap: 12px; }
+    .env-row { grid-template-columns: 1fr; gap: 4px; }
+    footer { padding: 0 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">BucketLens</a>
+    <div class="nav-links">
+      <a href="/features.html" class="nav-link">features</a>
+      <a href="/contact.html" class="nav-link">contact</a>
+      <a href="/deploy.html" class="nav-link active">deploy</a>
+    </div>
+    <div class="nav-right">
+      <a href="https://github.com/vishukamble/bucketlens" class="nav-github" target="_blank" rel="noopener">GitHub ↗</a>
+      <span class="pip-pill" onclick="copyText('pip install bucketlens', this)">pip install bucketlens</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>self-hosting BucketLens</h1>
+  <div class="hero-sub">
+    <span>// for teams running on internal infrastructure</span><br>
+    <span>// read the security section before changing any defaults</span>
+  </div>
+</div>
+
+<!-- Warning banner -->
+<div class="warning-banner-wrap">
+  <div class="warning-banner">
+    BucketLens binds to 127.0.0.1 by default.<br>
+    Exposing it on a network without authentication means anyone on that network can delete your S3 objects.<br>
+    Do not change the bind address until auth is configured.
+  </div>
+</div>
+
+<!-- Single user -->
+<section>
+  <div class="section-inner">
+    <div class="section-title">single user — the simple case</div>
+    <div class="code-block"><span class="comment">git clone https://github.com/vishukamble/bucketlens</span>
+<span class="comment">cd bucketlens</span>
+<span class="comment">pip install flask boto3</span>
+<span class="comment">python app.py</span>
+<span class="comment"># → http://127.0.0.1:8080</span></div>
+  </div>
+</section>
+
+<!-- Team deployment -->
+<section id="team" style="border-top: 1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-title">team deployment — internal server</div>
+
+    <!-- Prerequisites -->
+    <div class="code-block" style="margin-bottom:40px"><span class="comment"># server requirements</span>
+<span class="key">python 3.8+</span>
+<span class="key">nginx or caddy</span>
+<span class="key">aws credentials or IAM role on the server</span></div>
+
+    <!-- Step 1 -->
+    <div class="step-row">
+      <div class="step-num-badge">01</div>
+      <div class="step-content">
+        <div class="step-heading">clone and install</div>
+        <div class="code-block-full">git clone https://github.com/vishukamble/bucketlens /opt/bucketlens
+cd /opt/bucketlens && pip install flask boto3</div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-row">
+      <div class="step-num-badge">02</div>
+      <div class="step-content">
+        <div class="step-heading">systemd service</div>
+        <div class="step-desc">/etc/systemd/system/bucketlens.service</div>
+        <div class="code-block-full">[Unit]
+Description=BucketLens S3 Browser
+After=network.target
+
+[Service]
+Type=simple
+User=bucketlens
+WorkingDirectory=/opt/bucketlens
+Environment=BucketLens_PORT=8080
+Environment=AWS_PROFILE=default
+ExecStart=/usr/bin/python3 app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</div>
+        <div class="code-block-full">sudo systemctl enable bucketlens
+sudo systemctl start bucketlens</div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-row">
+      <div class="step-num-badge">03</div>
+      <div class="step-content">
+        <div class="step-heading">nginx reverse proxy</div>
+        <div class="code-block-full">server {
+    listen 80;
+    server_name bucketlens.internal;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        client_max_body_size 500M;
+    }
+}</div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step-row">
+      <div class="step-num-badge">04</div>
+      <div class="step-content">
+        <div class="step-heading">minimal IAM policy</div>
+        <div class="code-block-full">{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "BucketLensAccess",
+    "Effect": "Allow",
+    "Action": [
+      "s3:ListAllMyBuckets",
+      "s3:ListBucket",
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject"
+    ],
+    "Resource": [
+      <span class="str">"arn:aws:s3:::your-bucket-name"</span>,
+      <span class="str">"arn:aws:s3:::your-bucket-name/*"</span>
+    ]
+  }]
+}</div>
+        <div class="note">Replace your-bucket-name. Never use Resource: * in production.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Auth -->
+<section id="auth" style="border-top: 1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-title">auth — interim options</div>
+    <div class="auth-callout">Team auth is on the roadmap. Until then:</div>
+    <div class="code-block-full" style="max-width:680px;margin:0 auto 16px"><span class="comment">htpasswd -c /etc/nginx/.htpasswd yourusername</span>
+
+<span class="comment"># in nginx location block:</span>
+<span class="key">auth_basic</span> <span class="str">"BucketLens"</span>;
+<span class="key">auth_basic_user_file</span> /etc/nginx/.htpasswd;</div>
+    <div class="vpn-note">Tailscale or WireGuard is cleaner —<br>VPN-only access with zero nginx config.</div>
+  </div>
+</section>
+
+<!-- Updating -->
+<section id="updating" style="border-top: 1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-title">updating</div>
+    <div class="code-block">cd /opt/bucketlens
+git pull
+sudo systemctl restart bucketlens</div>
+  </div>
+</section>
+
+<!-- Environment variables -->
+<section id="env" style="border-top: 1px solid var(--border)">
+  <div class="section-inner">
+    <div class="section-title">environment variables</div>
+    <div class="env-table">
+      <div class="env-row">
+        <span class="env-key">BucketLens_PORT</span>
+        <span class="env-val">8080</span>
+        <span class="env-desc">port to bind</span>
+      </div>
+      <div class="env-row">
+        <span class="env-key">AWS_PROFILE</span>
+        <span class="env-val">default</span>
+        <span class="env-desc">credentials profile</span>
+      </div>
+      <div class="env-row">
+        <span class="env-key">AWS_DEFAULT_REGION</span>
+        <span class="env-val">us-east-1</span>
+        <span class="env-desc">region override</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <span>BucketLens — local S3 browser</span>
+    <div class="footer-right">
+      <a href="https://github.com/vishukamble/bucketlens" target="_blank" rel="noopener">GitHub</a>
+      <span>AGPL-3.0</span>
+      <span>bucketlens.com</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+function copyText(text, btn) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => flashCopied(btn));
+  } else {
+    const el = document.createElement("textarea");
+    el.value = text; el.style.position = "fixed"; el.style.opacity = "0";
+    document.body.appendChild(el); el.select();
+    try { document.execCommand("copy"); flashCopied(btn); } catch (e) {}
+    document.body.removeChild(el);
+  }
+}
+function flashCopied(btn) {
+  if (!btn) return;
+  const original = btn.textContent;
+  btn.textContent = "copied!"; btn.classList.add("copied");
+  setTimeout(() => { btn.textContent = original; btn.classList.remove("copied"); }, 2000);
+}
+</script>
+</body>
+</html>

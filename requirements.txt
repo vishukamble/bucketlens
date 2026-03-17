@@ -1,0 +1,12 @@
+flask
+boto3
+
+# Azure Blob Storage support
+azure-storage-blob
+azure-identity
+
+# GCP Cloud Storage support
+google-cloud-storage
+
+# Optional — install when implementing these features
+Pillow                # EXIF metadata extraction (Phase 4)

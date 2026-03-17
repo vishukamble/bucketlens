@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BucketLens — cloud storage browser for developers</title>
+<meta name="description" content="Browse AWS S3, Azure Blob, and GCP Cloud Storage like a file explorer. Images, video, documents, code — streamed locally. No Docker. pip install and go.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #06060e;
+    --bg-secondary: #0d0d1a;
+    --bg-tertiary: #13132a;
+    --border: #1e1e3f;
+    --border-accent: #7c3aed;
+    --accent: #7c3aed;
+    --accent-light: #a78bfa;
+    --green: #00ff88;
+    --text-primary: #e8e8ff;
+    --text-secondary: #7878aa;
+    --text-muted: #444466;
+    --mono: 'JetBrains Mono', monospace;
+    --code: 'Fira Code', monospace;
+    --radius: 8px;
+    --warning: #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--mono);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    padding: 0 24px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0;
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-weight: 700; font-size: 16px;
+    color: var(--text-primary);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+  }
+
+  .nav-links {
+    display: flex; align-items: center; gap: 24px;
+  }
+
+  .nav-link {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-secondary); text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-link:hover { color: var(--text-primary); }
+
+  .nav-right {
+    display: flex; align-items: center; gap: 20px;
+  }
+
+  .nav-github {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-secondary); text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-github:hover { color: var(--text-primary); }
+
+  .pip-pill {
+    font-family: var(--code); font-size: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    color: var(--accent-light);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pip-pill:hover { border-color: var(--border-accent); color: var(--text-primary); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 100px 24px 80px;
+    max-width: 1100px; margin: 0 auto;
+    text-align: center;
+  }
+
+  .badge {
+    display: block; width: fit-content;
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    margin: 0 auto 28px;
+  }
+  .badge-dot {
+    display: inline-block; vertical-align: middle;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    margin-right: 8px;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 56px; font-weight: 700; line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 28px;
+  }
+  h1 .hl-accent { color: var(--accent); }
+
+  .hero-sub {
+    font-family: var(--code); font-size: 15px;
+    color: var(--text-secondary); line-height: 1.9;
+    margin-bottom: 40px;
+  }
+  .hero-sub span { display: block; }
+
+  .cmd-blocks {
+    display: flex; flex-direction: column; gap: 10px;
+    max-width: 480px; margin: 0 auto 24px;
+  }
+
+  .cmd-row {
+    display: flex; align-items: center; gap: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .cmd-text {
+    font-family: var(--code); font-size: 14px;
+    color: var(--text-primary);
+    padding: 12px 16px;
+    flex: 1; cursor: text; user-select: all;
+  }
+
+  .copy-btn {
+    font-family: var(--code); font-size: 11px;
+    padding: 12px 16px;
+    background: none;
+    border: none; border-left: 1px solid var(--border);
+    color: var(--text-muted); cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .copy-btn:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+  .copy-btn.copied { color: var(--green); }
+
+  .provider-row {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted);
+    display: flex; align-items: center; gap: 20px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .provider-row .ok { color: var(--green); }
+
+  /* ── Section base ── */
+  section { padding: 80px 0; }
+  .section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  .section-title {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 40px;
+    text-align: center;
+  }
+
+  /* ── What you get ── */
+  .feature-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    max-width: 900px; margin: 0 auto;
+  }
+
+  .feature-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .feature-card-icon {
+    font-size: 28px; margin-bottom: 16px; display: block;
+  }
+
+  .feature-card-text {
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary); line-height: 1.5;
+  }
+
+  /* ── Steps ── */
+  .steps {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    max-width: 900px; margin: 0 auto;
+  }
+
+  .step-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+
+  .step-num {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted); margin-bottom: 12px;
+  }
+
+  .step-label {
+    font-family: var(--mono); font-size: 18px; font-weight: 700;
+    color: var(--text-primary); margin-bottom: 14px;
+  }
+
+  .step-cmd {
+    font-family: var(--code); font-size: 14px;
+    color: var(--green); display: block;
+    line-height: 1.6;
+  }
+
+  .step-note {
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary); margin-top: 6px; display: block;
+  }
+
+  /* ── Install / Provider tabs ── */
+  .install-subtitle {
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .tab-bar {
+    display: flex; justify-content: center; gap: 4px;
+    margin-bottom: 28px;
+  }
+
+  .provider-tab {
+    font-family: var(--code); font-size: 13px;
+    padding: 8px 24px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .provider-tab:hover { color: var(--text-primary); }
+  .provider-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .tab-content { display: none; }
+
+  .install-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-primary); line-height: 2;
+    max-width: 560px; margin: 0 auto 16px;
+    white-space: pre; overflow-x: auto;
+    cursor: text; user-select: all;
+  }
+
+  .install-block .comment { color: var(--text-muted); }
+  .install-block .cmd { color: var(--text-primary); }
+  .install-block .ph { color: var(--warning); font-weight: 500; }
+
+  .tab-note {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 0 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .footer-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 0;
+    flex-wrap: wrap; gap: 12px;
+  }
+
+  footer a {
+    color: var(--text-muted); text-decoration: none;
+    transition: color 0.15s;
+  }
+  footer a:hover { color: var(--text-primary); }
+
+  .footer-links {
+    display: flex; align-items: center; gap: 20px;
+  }
+
+  .footer-right {
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .nav-inner { padding: 14px 0; }
+    .pip-pill { display: none; }
+    .nav-links { gap: 16px; }
+    .hero { padding: 60px 20px 60px; }
+    h1 { font-size: 36px; letter-spacing: -1px; }
+    .hero-sub { font-size: 13px; }
+    section { padding: 60px 0; }
+    .section-inner { padding: 0 20px; }
+    .feature-cards { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    footer { padding: 0 20px; }
+    .footer-inner { flex-direction: column; align-items: flex-start; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">BucketLens</a>
+    <div class="nav-links">
+      <a href="/features.html" class="nav-link">features</a>
+      <a href="/contact.html" class="nav-link">contact</a>
+      <a href="/deploy.html" class="nav-link">deploy</a>
+    </div>
+    <div class="nav-right">
+      <a href="https://github.com/vishukamble/bucketlens" class="nav-github" target="_blank" rel="noopener">GitHub ↗</a>
+      <span class="pip-pill" onclick="copyText('pip install bucketlens', this)">pip install bucketlens</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="badge">
+    <span class="badge-dot"></span>
+    open source · AGPL-3.0
+  </div>
+
+  <h1>
+    cloud storage,<br>
+    <span class="hl-accent">without the console.</span>
+  </h1>
+
+  <div class="hero-sub">
+    <span>// aws s3 · azure blob · gcp cloud storage</span>
+    <span>// runs entirely on your machine</span>
+    <span>// your credentials never leave localhost</span>
+  </div>
+
+  <div class="cmd-blocks">
+    <div class="cmd-row">
+      <span class="cmd-text">$ pip install bucketlens</span>
+      <button class="copy-btn" onclick="copyText('pip install bucketlens', this)">copy</button>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd-text">$ bucketlens</span>
+      <button class="copy-btn" onclick="copyText('bucketlens', this)">copy</button>
+    </div>
+  </div>
+
+  <div class="provider-row">
+    <span>aws <span class="ok">✓</span></span>
+    <span>azure <span class="ok">✓</span></span>
+    <span>gcp <span class="ok">✓</span></span>
+    <span>python 3.8+</span>
+    <span>AGPL-3</span>
+  </div>
+  <div class="provider-row" style="margin-top:12px;margin-bottom:4px;font-size:13px;color:var(--text-secondary)">
+    <span style="color:var(--green)">jpg</span><span style="color:var(--accent)"> · </span>png<span style="color:var(--accent)"> · </span>mp4<span style="color:var(--accent)"> · </span><span style="color:var(--green)">pdf</span><span style="color:var(--accent)"> · </span><span style="color:var(--green)">json</span><span style="color:var(--accent)"> · </span>txt<span style="color:var(--accent)"> · </span>csv<span style="color:var(--accent)"> · </span>md<span style="color:var(--accent)"> · </span><span style="color:var(--green)">zip</span><span style="color:var(--accent)"> · </span>...
+  </div>
+</div>
+
+<!-- What you get -->
+<section>
+  <div class="section-inner">
+    <div class="section-title">what you get</div>
+    <div class="feature-cards">
+      <div class="feature-card">
+        <span class="feature-card-icon">🗂</span>
+        <div class="feature-card-text">thumbnail grid, list view, folder navigation</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">🔍</span>
+        <div class="feature-card-text">instant search, sort, group by date or size</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">🔒</span>
+        <div class="feature-card-text">2-step delete, audit log, zero telemetry</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how">
+  <div class="section-inner">
+    <div class="section-title">zero config. three commands.</div>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">01 / install</div>
+        <div class="step-label">install</div>
+        <code class="step-cmd">pip install bucketlens</code>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02 / configure</div>
+        <div class="step-label">configure</div>
+        <code class="step-cmd">aws configure</code>
+        <span class="step-note">// or use existing ~/.aws/credentials</span>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03 / run</div>
+        <div class="step-label">run</div>
+        <code class="step-cmd">bucketlens</code>
+        <span class="step-note">// → http://127.0.0.1:8080</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section id="install">
+  <div class="section-inner">
+    <div class="section-title">get started in 30 seconds</div>
+    <div class="install-subtitle">// pick your cloud provider</div>
+
+    <div class="tab-bar">
+      <button class="provider-tab" data-provider="aws" onclick="switchTab('aws')">AWS</button>
+      <button class="provider-tab" data-provider="azure" onclick="switchTab('azure')">Azure</button>
+      <button class="provider-tab" data-provider="gcp" onclick="switchTab('gcp')">GCP</button>
+    </div>
+
+    <!-- AWS -->
+    <div class="tab-content" id="tab-aws">
+      <div class="install-block"><span class="comment"># prerequisites</span>
+<span class="cmd">python 3.8+</span>
+<span class="cmd">aws cli configured  →  aws configure</span></div>
+
+      <div class="install-block"><span class="cmd">pip install bucketlens</span>
+<span class="cmd">bucketlens</span>
+<span class="comment"># → open http://127.0.0.1:8080</span></div>
+
+      <div class="install-block"><span class="comment"># optional: profile + custom port</span>
+<span class="cmd">AWS_PROFILE=prod bucketlens</span>
+<span class="cmd">BucketLens_PORT=9090 bucketlens</span></div>
+    </div>
+
+    <!-- Azure -->
+    <div class="tab-content" id="tab-azure">
+      <div class="install-block"><span class="comment"># prerequisites</span>
+<span class="cmd">python 3.8+</span>
+<span class="cmd">pip install azure-cli azure-storage-blob azure-identity</span></div>
+
+      <div class="install-block"><span class="cmd">az login</span>
+<span class="cmd">az account set --subscription <span class="ph">{YOUR_SUBSCRIPTION_ID}</span></span>
+<span class="comment"># → replace {YOUR_SUBSCRIPTION_ID} with your actual ID</span></div>
+
+      <div class="install-block"><span class="cmd">pip install bucketlens</span>
+<span class="cmd">AZURE_STORAGE_ACCOUNT=myaccount bucketlens</span>
+<span class="comment"># → open http://127.0.0.1:8080</span></div>
+
+      <div class="install-block"><span class="comment"># or use a connection string</span>
+<span class="cmd">AZURE_STORAGE_CONNECTION_STRING="DefaultEndpoints..." bucketlens</span></div>
+    </div>
+
+    <!-- GCP -->
+    <div class="tab-content" id="tab-gcp">
+      <div class="install-block"><span class="comment"># prerequisites</span>
+<span class="cmd">python 3.8+</span>
+<span class="cmd">pip install google-cloud-storage</span></div>
+
+      <div class="install-block"><span class="cmd">gcloud auth application-default login</span>
+<span class="cmd">gcloud config set project <span class="ph">{YOUR_PROJECT_ID}</span></span>
+<span class="comment"># → replace {YOUR_PROJECT_ID} with your actual project</span></div>
+
+      <div class="install-block"><span class="cmd">pip install bucketlens</span>
+<span class="cmd">GOOGLE_CLOUD_PROJECT=my-project bucketlens</span>
+<span class="comment"># → open http://127.0.0.1:8080</span></div>
+
+      <div class="install-block"><span class="comment"># or use a service account key</span>
+<span class="cmd">GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json bucketlens</span></div>
+    </div>
+
+    <div class="tab-note">azure and gcp support in active development · aws fully supported today</div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <span>BucketLens — cloud storage browser</span>
+    <div class="footer-links">
+      <a href="/features.html">features</a>
+      <a href="/deploy.html">deploy guide</a>
+      <a href="/contact.html">contact</a>
+    </div>
+    <div class="footer-right">
+      <a href="https://github.com/vishukamble/bucketlens" target="_blank" rel="noopener">GitHub</a>
+      <span>AGPL-3.0</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+function switchTab(provider) {
+  document.querySelectorAll('.provider-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  document.querySelector(`.provider-tab[data-provider="${provider}"]`).classList.add('active');
+  document.getElementById(`tab-${provider}`).style.display = 'block';
+}
+
+document.addEventListener('DOMContentLoaded', () => switchTab('aws'));
+
+function copyText(text, btn) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => flashCopied(btn));
+  } else {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed"; el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    try { document.execCommand("copy"); flashCopied(btn); } catch (e) {}
+    document.body.removeChild(el);
+  }
+}
+
+function flashCopied(btn) {
+  if (!btn) return;
+  const original = btn.textContent;
+  btn.textContent = "copied!";
+  btn.classList.add("copied");
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.classList.remove("copied");
+  }, 2000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BucketLens — access denied</title>
+<style>
+  :root {
+    --bg-primary: #06060e;
+    --border: #1e1e3f;
+    --accent: #7c3aed;
+    --accent-light: #a78bfa;
+    --text-primary: #e8e8ff;
+    --text-secondary: #7878aa;
+    --text-muted: #444466;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Courier New', monospace;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .error-card {
+    text-align: center;
+    max-width: 480px;
+    width: 100%;
+  }
+
+  .error-code {
+    font-size: 120px;
+    font-weight: 700;
+    color: var(--text-muted);
+    line-height: 1;
+    letter-spacing: -4px;
+    margin-bottom: 16px;
+  }
+
+  .error-label {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .error-desc {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+
+  .error-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .error-btn {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 20px;
+    text-decoration: none;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .error-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent-light);
+  }
+</style>
+</head>
+<body>
+
+<div class="error-card">
+  <div class="error-code">403</div>
+  <div class="error-label">// access denied</div>
+  <div class="error-desc">this bucket or object isn't publicly accessible.</div>
+  <div class="error-buttons">
+    <a href="/" class="error-btn">← back to bucketlens.com</a>
+    <a href="https://github.com/vishukamble/bucketlens" class="error-btn" target="_blank" rel="noopener">view on github →</a>
+  </div>
+</div>
+
+</body>
+</html>

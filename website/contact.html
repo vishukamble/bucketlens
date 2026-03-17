@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BucketLens — contact</title>
+<meta name="description" content="Bug reports, feature requests, and contributions for BucketLens.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #06060e;
+    --bg-secondary: #0d0d1a;
+    --bg-tertiary: #13132a;
+    --border: #1e1e3f;
+    --border-accent: #7c3aed;
+    --accent: #7c3aed;
+    --accent-light: #a78bfa;
+    --green: #00ff88;
+    --danger: #ff4466;
+    --text-primary: #e8e8ff;
+    --text-secondary: #7878aa;
+    --text-muted: #444466;
+    --mono: 'JetBrains Mono', monospace;
+    --code: 'Fira Code', monospace;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--mono);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    padding: 0 24px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0;
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-weight: 700; font-size: 16px;
+    color: var(--text-primary);
+    text-decoration: none;
+    letter-spacing: -0.5px;
+  }
+
+  .nav-links {
+    display: flex; align-items: center; gap: 24px;
+  }
+
+  .nav-link {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-secondary); text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-link:hover { color: var(--text-primary); }
+  .nav-link.active { color: var(--accent-light); border-bottom: 1px solid var(--accent); padding-bottom: 2px; }
+
+  .nav-right {
+    display: flex; align-items: center; gap: 20px;
+  }
+
+  .nav-github {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-secondary); text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-github:hover { color: var(--text-primary); }
+
+  .pip-pill {
+    font-family: var(--code); font-size: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    color: var(--accent-light);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pip-pill:hover { border-color: var(--border-accent); color: var(--text-primary); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 80px 24px 60px;
+    max-width: 1100px; margin: 0 auto;
+    text-align: center;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 48px; font-weight: 700; line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 20px;
+  }
+
+  .hero-sub {
+    font-family: var(--code); font-size: 15px;
+    color: var(--text-muted);
+  }
+
+  /* ── Section base ── */
+  section { padding: 60px 0; }
+  .section-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  .section-title {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 40px;
+    text-align: center;
+  }
+
+  /* ── Contact cards ── */
+  .contact-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+
+  .contact-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    display: flex; flex-direction: column;
+  }
+
+  .contact-icon {
+    font-family: var(--code); font-size: 20px;
+    font-weight: 500; margin-bottom: 16px;
+  }
+
+  .contact-card-title {
+    font-family: var(--mono); font-size: 15px; font-weight: 600;
+    color: var(--text-primary); margin-bottom: 12px;
+  }
+
+  .contact-card-desc {
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary); line-height: 1.7;
+    flex: 1; margin-bottom: 20px;
+  }
+
+  .contact-btn {
+    display: inline-block;
+    font-family: var(--code); font-size: 12px;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    background: transparent;
+    text-decoration: none;
+    transition: all 0.15s;
+    width: fit-content;
+  }
+
+  .contact-btn.danger {
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+  .contact-btn.danger:hover { background: rgba(255, 68, 102, 0.08); }
+
+  .contact-btn.accent {
+    border: 1px solid var(--accent);
+    color: var(--accent-light);
+  }
+  .contact-btn.accent:hover { background: rgba(124, 58, 237, 0.08); }
+
+  .contact-btn.green {
+    border: 1px solid var(--green);
+    color: var(--green);
+  }
+  .contact-btn.green:hover { background: rgba(0, 255, 136, 0.06); }
+
+  /* ── Response expectations ── */
+  .expectations-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 40px;
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary); line-height: 2;
+    max-width: 600px; margin: 0 auto;
+  }
+
+  .expectations-block .comment { color: var(--text-muted); }
+  .expectations-block .key { color: var(--text-primary); }
+  .expectations-block .arrow { color: var(--text-muted); }
+  .expectations-block .val { color: var(--text-secondary); }
+
+  /* ── Contributing ── */
+  .contributing-desc {
+    font-family: var(--code); font-size: 14px;
+    color: var(--text-secondary); line-height: 1.8;
+    max-width: 680px; margin: 0 auto 32px;
+    text-align: center;
+  }
+
+  .code-block {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-primary); line-height: 2;
+    max-width: 560px; margin: 0 auto 16px;
+    white-space: pre; overflow-x: auto;
+    cursor: text; user-select: all;
+  }
+  .code-block .comment { color: var(--text-muted); }
+  .code-block .cmd { color: var(--text-primary); }
+  .code-block .file { color: var(--accent-light); }
+  .code-block .note { color: var(--text-muted); }
+
+  /* ── Footer ── */
+  footer {
+    padding: 0 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .footer-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 0;
+    flex-wrap: wrap; gap: 12px;
+  }
+
+  footer a {
+    color: var(--text-muted); text-decoration: none;
+    transition: color 0.15s;
+  }
+  footer a:hover { color: var(--text-primary); }
+
+  .footer-right {
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .nav-inner { padding: 14px 0; }
+    .pip-pill { display: none; }
+    .nav-links { gap: 16px; }
+    .hero { padding: 60px 20px 40px; }
+    h1 { font-size: 32px; }
+    section { padding: 40px 0; }
+    .section-inner { padding: 0 20px; }
+    .contact-cards { grid-template-columns: 1fr; }
+    .expectations-block { padding: 24px 20px; }
+    footer { padding: 0 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">BucketLens</a>
+    <div class="nav-links">
+      <a href="/features.html" class="nav-link">features</a>
+      <a href="/contact.html" class="nav-link active">contact</a>
+      <a href="/deploy.html" class="nav-link">deploy</a>
+    </div>
+    <div class="nav-right">
+      <a href="https://github.com/vishukamble/bucketlens" class="nav-github" target="_blank" rel="noopener">GitHub ↗</a>
+      <span class="pip-pill" onclick="copyText('pip install bucketlens', this)">pip install bucketlens</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>get in touch</h1>
+  <div class="hero-sub">// open source means open conversations</div>
+</div>
+
+<!-- Contact cards -->
+<section>
+  <div class="section-inner">
+    <div class="contact-cards">
+      <div class="contact-card">
+        <div class="contact-icon" style="color: var(--danger);">[!]</div>
+        <div class="contact-card-title">bug report</div>
+        <div class="contact-card-desc">Found something broken? Open an issue on GitHub with steps to reproduce.</div>
+        <a href="https://github.com/vishukamble/bucketlens/issues/new?template=bug_report.md" class="contact-btn danger" target="_blank" rel="noopener">open issue →</a>
+      </div>
+
+      <div class="contact-card">
+        <div class="contact-icon" style="color: var(--accent-light);">[+]</div>
+        <div class="contact-card-title">feature request</div>
+        <div class="contact-card-desc">Missing something? Check open issues first, then open a new one with your use case.</div>
+        <a href="https://github.com/vishukamble/bucketlens/issues/new?template=feature_request.md" class="contact-btn accent" target="_blank" rel="noopener">request feature →</a>
+      </div>
+
+      <div class="contact-card">
+        <div class="contact-icon" style="color: var(--green);">[~]</div>
+        <div class="contact-card-title">discussion</div>
+        <div class="contact-card-desc">Questions, ideas, show and tell. Use GitHub Discussions for anything that isn't a bug or feature request.</div>
+        <a href="https://github.com/vishukamble/bucketlens/discussions" class="contact-btn green" target="_blank" rel="noopener">start discussion →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Response expectations -->
+<section>
+  <div class="section-inner">
+    <div class="section-title">what to expect</div>
+    <div class="expectations-block"><span class="comment"># what to expect</span>
+
+<span class="key">response time    </span><span class="arrow">→  </span><span class="val">best effort, this is a side project</span>
+<span class="key">bug fixes        </span><span class="arrow">→  </span><span class="val">prioritized if reproducible</span>
+<span class="key">feature requests </span><span class="arrow">→  </span><span class="val">considered, not guaranteed</span>
+<span class="key">PRs              </span><span class="arrow">→  </span><span class="val">welcome, open an issue first</span></div>
+  </div>
+</section>
+
+<!-- Contributing -->
+<section>
+  <div class="section-inner">
+    <div class="section-title">contributing</div>
+    <div class="contributing-desc">BucketLens is intentionally small — ~120 lines of Flask, one HTML file. PRs that stay within that philosophy are more likely to be merged.</div>
+
+    <div class="code-block"><span class="comment"># clone and run locally</span>
+<span class="cmd">git clone https://github.com/vishukamble/bucketlens</span>
+<span class="cmd">cd bucketlens</span>
+<span class="cmd">pip install flask boto3</span>
+<span class="cmd">python app.py</span></div>
+
+    <div class="code-block"><span class="comment"># the only two files that matter</span>
+<span class="file">app.py               </span><span class="note">  # flask backend</span>
+<span class="file">templates/index.html </span><span class="note">  # entire frontend</span></div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+  <span>BucketLens — local S3 browser</span>
+  <div class="footer-right">
+    <a href="https://github.com/vishukamble/bucketlens" target="_blank" rel="noopener">GitHub</a>
+    <span>AGPL-3.0</span>
+    <span>bucketlens.com</span>
+  </div>
+  </div>
+</footer>
+
+<script>
+function copyText(text, btn) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => flashCopied(btn));
+  } else {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed"; el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    try { document.execCommand("copy"); flashCopied(btn); } catch (e) {}
+    document.body.removeChild(el);
+  }
+}
+
+function flashCopied(btn) {
+  if (!btn) return;
+  const original = btn.textContent;
+  btn.textContent = "copied!";
+  btn.classList.add("copied");
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.classList.remove("copied");
+  }, 2000);
+}
+</script>
+</body>
+</html>

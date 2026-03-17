@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BucketLens — S3 Browser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  #helpBackdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 199;
+  }
+  #helpDrawer {
+    position: fixed; right: 0; top: 0; bottom: 0;
+    width: 360px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+    padding: 24px 20px;
+  }
+  .help-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .help-header-title {
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    color: var(--text-primary);
+  }
+  .help-close {
+    background: none; border: none;
+    color: var(--text-muted); font-size: 18px;
+    cursor: pointer; line-height: 1; padding: 2px 6px;
+    transition: color 0.15s;
+  }
+  .help-close:hover { color: var(--text-primary); }
+  .help-section { margin-bottom: 28px; }
+  .help-section-title {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: 8px;
+  }
+  .help-divider {
+    border: none; border-top: 1px solid var(--border); margin-bottom: 14px;
+  }
+  .help-kv {
+    display: grid; grid-template-columns: 90px 1fr;
+    gap: 6px 12px;
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-secondary); line-height: 1.7;
+  }
+  .help-kv .k { color: var(--accent-light); white-space: nowrap; }
+  .help-feature-row { margin-bottom: 14px; }
+  .help-feature-name {
+    font-family: var(--code); font-size: 12px;
+    color: var(--accent-light); margin-bottom: 2px;
+  }
+  .help-feature-desc {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-secondary); line-height: 1.6;
+  }
+  .help-cost-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-left: 2px solid #f59e0b;
+    border-radius: 6px; padding: 14px 16px;
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-secondary); line-height: 1.8;
+    white-space: pre-wrap;
+  }
+  .help-para {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-secondary); line-height: 1.7; margin-bottom: 12px;
+  }
+  .help-diagram {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted); line-height: 1.7; white-space: pre;
+  }
+  .help-link { color: var(--accent); text-decoration: none; }
+  .help-link:hover { text-decoration: underline; }
+  .help-list {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-secondary); line-height: 1.8;
+    padding-left: 16px; margin: 8px 0 0;
+  }
+
+  /* card-file hover */
+  .card-file {
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .card-file:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(124,58,237,0.15);
+  }
+
+  /* File type pill in list view */
+  .file-type-pill {
+    font-family: var(--code); font-size: 11px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    align-self: center;
+  }
+  .list-file-icon {
+    font-family: var(--code); font-size: 13px;
+    color: var(--accent-light);
+    display: flex; align-items: center; justify-content: center;
+    width: 40px;
+  }
+
+  /* File preview modal */
+  #filePreviewModal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 300;
+    flex-direction: column;
+  }
+  #filePreviewModal.open { display: flex; }
+
+  .fp-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .fp-filename {
+    font-family: var(--code); font-size: 14px;
+    color: var(--text-primary); font-weight: 600;
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fp-size {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-muted);
+  }
+  .fp-header-actions { display: flex; gap: 8px; align-items: center; }
+  .fp-dl-btn {
+    font-family: var(--code); font-size: 12px;
+    padding: 5px 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    text-decoration: none; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .fp-dl-btn:hover { border-color: var(--accent-light); color: var(--text-primary); }
+  .fp-close {
+    background: none; border: none;
+    color: var(--text-muted); font-size: 20px;
+    cursor: pointer; line-height: 1; padding: 4px 8px;
+    transition: color 0.15s;
+  }
+  .fp-close:hover { color: var(--text-primary); }
+
+  .fp-body {
+    flex: 1; overflow-y: auto;
+    padding: 20px 24px;
+    background: var(--bg-primary);
+  }
+  .fp-code {
+    font-family: var(--mono); font-size: 13px;
+    color: var(--text-primary); line-height: 1.6;
+    white-space: pre-wrap; word-break: break-all;
+    background: var(--bg-primary);
+    margin: 0;
+  }
+  .fp-loading, .fp-error {
+    font-family: var(--code); font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center; padding: 60px 0;
+    line-height: 1.8;
+  }
+  .fp-note { color: var(--text-muted); }
+  .fp-dl-link {
+    font-family: var(--code); font-size: 13px;
+    color: var(--accent-light); text-decoration: none;
+  }
+  .fp-dl-link:hover { text-decoration: underline; }
+
+  .fp-table-wrap { overflow-x: auto; }
+  .fp-table {
+    font-family: var(--code); font-size: 12px;
+    border-collapse: collapse; width: 100%;
+    color: var(--text-secondary);
+  }
+  .fp-table th {
+    background: var(--bg-tertiary);
+    color: var(--text-primary); font-weight: 600;
+    padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .fp-table td { padding: 6px 12px; border-bottom: 1px solid var(--border); }
+  .fp-row-even { background: var(--bg-primary); }
+  .fp-row-odd  { background: var(--bg-secondary); }
+
+  /* Cost hint banner */
+  #costHintBanner {
+    display: none;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 20px;
+    font-family: var(--code); font-size: 12px;
+    color: #f59e0b;
+    display: none; align-items: center; gap: 10px;
+  }
+  #costHintBanner span { flex: 1; }
+  #costHintBanner button {
+    background: none; border: none;
+    color: #f59e0b; cursor: pointer; font-size: 14px;
+    line-height: 1; padding: 2px 6px;
+    opacity: 0.7;
+  }
+  #costHintBanner button:hover { opacity: 1; }
+
+  /* Download cost modal */
+  #downloadCostModal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 300;
+    align-items: center; justify-content: center;
+  }
+  #downloadCostModal.open {
+    display: flex;
+  }
+  .dl-cost-card {
+    background: var(--bg-secondary);
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 28px 32px;
+    max-width: 420px; width: 90%;
+    font-family: var(--code); font-size: 13px;
+  }
+  .dl-cost-msg {
+    color: var(--text-secondary); line-height: 1.8;
+    margin-bottom: 20px; white-space: pre-wrap;
+  }
+  .dl-cost-actions { display: flex; gap: 10px; }
+
+  /* Bucket info cost estimate */
+  .bic-cost-estimate {
+    margin-top: 12px;
+    border-left: 2px solid #f59e0b;
+  }
+  .bic-cost-table {
+    font-family: var(--code); font-size: 12px;
+    color: var(--text-primary); line-height: 1.8;
+    white-space: pre; margin: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-icon">☁</div>
+    <span>BucketLens</span>
+  </div>
+  <span class="provider-pill" id="providerPill"></span>
+
+  <div class="topbar-controls">
+    <select id="bucketSelect" title="Select bucket">
+      <option value="">— select bucket —</option>
+    </select>
+
+    <div class="path-display" id="breadcrumb">
+      <span class="path-segment" style="color:var(--text-muted)">Select a bucket to browse</span>
+    </div>
+  </div>
+
+  <div class="topbar-actions">
+    <button class="switch-link" id="switchProviderBtn" onclick="switchProvider()">Switch provider</button>
+    <label class="btn btn-primary" id="uploadBtn" style="display:none">
+      ⬆ Upload
+      <input type="file" id="fileInput" multiple hidden>
+    </label>
+    <button class="btn btn-sm" id="downloadBtn" style="display:none" onclick="downloadWithWarning()">
+      ⬇ Download
+    </button>
+    <button class="btn btn-danger btn-sm" id="deleteBtn" style="display:none" onclick="deleteSelected()">
+      🗑 Delete
+    </button>
+    <button class="btn btn-sm" onclick="toggleHelp()" title="help &amp; shortcuts">?</button>
+  </div>
+</header>
+
+<!-- Status bar -->
+<div class="statusbar">
+  <div class="statusbar-left">
+    <span id="objectCount">—</span>
+    <input type="text" id="searchInput" placeholder="filter files..." autocomplete="off">
+    <div id="sortControls" style="display:none">
+      Sort:
+      <select id="sortField">
+        <option value="name">name</option>
+        <option value="size">size</option>
+        <option value="date">date modified</option>
+      </select>
+      <button id="sortDir" title="toggle direction">↑</button>
+    </div>
+    <div id="groupControls">
+      Group:
+      <select id="groupBy">
+        <option value="none">none</option>
+        <option value="date-modified">date modified</option>
+        <option value="size">file size</option>
+        <option value="type">file type</option>
+      </select>
+    </div>
+    <div class="size-slider">
+      <span style="font-size:10px">🔍</span>
+      <input type="range" id="sizeSlider" min="100" max="400" value="180" title="Thumbnail size">
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="view-toggle">
+      <button onclick="openShortcutsModal()" title="Keyboard shortcuts">?</button>
+    </div>
+    <div class="view-toggle">
+      <button class="active" data-view="grid" onclick="setView('grid')">Grid</button>
+      <button data-view="list" onclick="setView('list')">List</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cost hint banner -->
+<div id="costHintBanner">
+  <span id="costHintMsg"></span>
+  <button onclick="dismissCostHint()" title="dismiss">×</button>
+</div>
+
+<!-- Content -->
+<main class="content" id="content">
+  <div class="empty-state">
+    <div class="es-icon">☁️</div>
+    <div class="es-title">Welcome to BucketLens</div>
+    <div class="es-sub">images, video, documents, code — everything in your bucket</div>
+  </div>
+</main>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-info-btn" id="lightboxInfoBtn" onclick="openExifPanel('')" title="Image info (I)">i</button>
+  <button class="lightbox-nav prev" onclick="navLightbox(-1)">‹</button>
+  <button class="lightbox-nav next" onclick="navLightbox(1)">›</button>
+  <div id="lightboxContent"></div>
+  <div class="lightbox-info" id="lightboxInfo"></div>
+</div>
+
+<!-- Drop zone overlay -->
+<div class="dropzone-overlay" id="dropzone">
+  <div class="dz-inner">
+    <div class="dz-icon">📂</div>
+    <div class="dz-text">Drop files to upload</div>
+    <div class="dz-sub" id="dropzoneTarget"></div>
+  </div>
+</div>
+
+<!-- Upload toast -->
+<div class="upload-toast" id="uploadToast">
+  <div class="upload-toast-title">Uploading…</div>
+  <div class="upload-toast-bar"><div class="upload-toast-fill" id="uploadFill"></div></div>
+  <div class="upload-toast-status" id="uploadStatus"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Provider Modal -->
+<div class="modal-backdrop" id="providerModal">
+  <div class="modal-card">
+    <div class="modal-title">Choose your cloud provider</div>
+    <div class="modal-sub">BucketLens uses your existing credentials — nothing is stored or sent anywhere.</div>
+    <div class="provider-buttons">
+      <button class="provider-btn" id="btn-aws" onclick="selectProvider('aws')">
+        <svg width="28" height="20" viewBox="0 0 28 20" fill="currentColor">
+          <path d="M22 8.5a5.5 5.5 0 0 0-10.6-2A4 4 0 1 0 6 14h16a4 4 0 0 0 0-8z"/>
+        </svg>
+        AWS S3
+      </button>
+      <button class="provider-btn" id="btn-azure" onclick="selectProvider('azure')">
+        <svg width="28" height="20" viewBox="0 0 28 20" fill="currentColor">
+          <path d="M22 8.5a5.5 5.5 0 0 0-10.6-2A4 4 0 1 0 6 14h16a4 4 0 0 0 0-8z"/>
+        </svg>
+        Azure
+      </button>
+      <button class="provider-btn" id="btn-gcp" onclick="selectProvider('gcp')">
+        <svg width="28" height="20" viewBox="0 0 28 20" fill="currentColor">
+          <path d="M22 8.5a5.5 5.5 0 0 0-10.6-2A4 4 0 1 0 6 14h16a4 4 0 0 0 0-8z"/>
+        </svg>
+        GCP
+      </button>
+    </div>
+    <div class="cred-status" id="credStatus"></div>
+    <div class="cred-actions" id="credActions"></div>
+  </div>
+</div>
+
+<!-- Delete Warning Modal (Step 1) -->
+<div class="modal-backdrop" id="deleteWarningModal">
+  <div class="modal-card modal-card-danger">
+    <div class="modal-title" style="color:var(--danger)">Permanently delete files</div>
+    <div class="modal-sub" id="deleteWarningMsg"></div>
+    <ul class="delete-file-list" id="deleteWarningList"></ul>
+    <div class="cred-actions">
+      <button class="btn" onclick="closeDeleteWarning()">Cancel</button>
+      <button class="btn" style="color:var(--danger);border-color:var(--danger)" onclick="openDeleteConfirmView()">I understand, proceed →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal-backdrop" id="shareModal">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-title" id="shareModalTitle">share link</div>
+    <div class="share-expiry-row">
+      <span class="share-expiry-label">Link expires in:</span>
+      <div class="share-expiry-btns">
+        <button class="expiry-btn active" onclick="setShareExpiry(3600)">1 hour</button>
+        <button class="expiry-btn" onclick="setShareExpiry(28800)">8 hours</button>
+        <button class="expiry-btn" onclick="setShareExpiry(86400)">24 hours</button>
+        <button class="expiry-btn" onclick="setShareExpiry(604800)">7 days</button>
+      </div>
+    </div>
+    <input type="text" id="presignedUrl" readonly onclick="this.select()" placeholder="generating…">
+    <div class="share-expiry-info" id="presignExpiry"></div>
+    <div class="cred-actions" style="margin-bottom:16px">
+      <button class="btn btn-primary" onclick="copyPresignedUrl()">Copy link</button>
+      <button class="btn" onclick="closeShareModal()">Close</button>
+    </div>
+    <div class="share-warning">
+      // this URL grants public read access to this file<br>
+      // anyone with the link can download it<br>
+      // it expires automatically — no way to revoke early
+    </div>
+  </div>
+</div>
+
+<!-- Shortcuts Modal -->
+<div class="modal-backdrop" id="shortcutsModal" onclick="closeShortcutsModal()">
+  <div class="modal-card" onclick="event.stopPropagation()" style="max-width:480px">
+    <div class="modal-title">keyboard shortcuts</div>
+    <table class="shortcuts-table">
+      <tbody>
+        <tr class="shortcuts-section"><td colspan="2">Navigation</td></tr>
+        <tr><td>G</td><td>toggle grid / list view</td></tr>
+        <tr><td>/</td><td>focus search</td></tr>
+        <tr><td>ESC</td><td>clear selection / close</td></tr>
+        <tr class="shortcuts-section"><td colspan="2">Lightbox</td></tr>
+        <tr><td>← →</td><td>previous / next image</td></tr>
+        <tr><td>ESC</td><td>close lightbox</td></tr>
+        <tr class="shortcuts-section"><td colspan="2">Selection</td></tr>
+        <tr><td>Ctrl+A</td><td>select all</td></tr>
+        <tr><td>ESC</td><td>deselect all</td></tr>
+        <tr><td>Ctrl+C</td><td>copy S3 URIs of selected</td></tr>
+        <tr><td>Ctrl+D</td><td>download selected as ZIP</td></tr>
+        <tr class="shortcuts-section"><td colspan="2">General</td></tr>
+        <tr><td>?</td><td>toggle help drawer</td></tr>
+      </tbody>
+    </table>
+    <div class="cred-actions" style="margin-top:20px">
+      <button class="btn" onclick="closeShortcutsModal()">close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bucket Info Modal -->
+<div class="modal-backdrop" id="bucketInfoModal">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-title">before you browse <span id="bucketInfoName"></span></div>
+    <div class="bucket-info-cards">
+      <div class="bucket-info-card bucket-info-card-green">
+        <div class="bic-label">how images load</div>
+        <div class="bic-content">Images stream through localhost on demand. Nothing is downloaded or saved to disk. Flask proxies S3 bytes directly to your browser.</div>
+        <pre class="bic-diagram">S3 → Flask (localhost) → your browser
+          ↑
+     nothing saved</pre>
+      </div>
+      <div class="bucket-info-card bucket-info-card-amber">
+        <div class="bic-label">S3 costs</div>
+        <div class="bic-content">Every image you view is one S3 GET request. Browsing 500 thumbnails = 500 GET requests. S3 GET pricing: ~$0.0004 per 1,000 requests.</div>
+        <div class="bic-note">Use the size slider to load fewer thumbnails at once. Folders help too — navigate rather than scroll through thousands of files.</div>
+      </div>
+    </div>
+    <div class="bucket-info-card bic-cost-estimate">
+      <div class="bic-label">estimated cost for this session</div>
+      <pre class="bic-cost-table">viewing 100 thumbnails  →  ~$0.00004
+viewing 1,000 files     →  ~$0.0004
+downloading 1GB         →  ~$0.09</pre>
+      <div class="bic-note">// S3 pricing varies by region and account tier<br>// these are us-east-1 standard rates</div>
+    </div>
+    <label class="bucket-info-check">
+      <input type="checkbox" id="bucketInfoDontShow">
+      Don't show this again for <span id="bucketInfoDontShowName"></span>
+    </label>
+    <div class="cred-actions">
+      <button class="btn btn-primary" onclick="confirmBucketInfo()">got it, start browsing</button>
+      <button class="btn" onclick="cancelBucketInfo()">pick a different bucket</button>
+    </div>
+  </div>
+</div>
+
+<!-- Setup Sub-Modal -->
+<div class="modal-backdrop" id="setupModal">
+  <div class="modal-card">
+    <div class="modal-title" id="setupTitle"></div>
+    <div class="modal-sub" id="setupSub">Run these commands in your terminal, then click "Done, check again".</div>
+    <div class="setup-commands" id="setupCommands"></div>
+    <div class="setup-footer">
+      <button class="btn btn-primary" onclick="recheckHealth()">Done, check again</button>
+      <button class="btn" onclick="closeSetupModal()">Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- Download cost warning modal -->
+<div id="downloadCostModal">
+  <div class="dl-cost-card">
+    <div class="dl-cost-msg" id="downloadCostMsg"></div>
+    <div class="dl-cost-actions">
+      <button class="btn" onclick="closeDownloadCostModal()">cancel</button>
+      <button class="btn" style="color:#f59e0b;border-color:#f59e0b" onclick="proceedDownload()">download anyway</button>
+    </div>
+  </div>
+</div>
+
+<!-- File preview modal -->
+<div id="filePreviewModal">
+  <div class="fp-header">
+    <span class="fp-filename" id="fpFilename"></span>
+    <span class="fp-size" id="fpSize"></span>
+    <div class="fp-header-actions">
+      <a class="fp-dl-btn" id="fpDownloadBtn" download>⬇ Download</a>
+      <button class="fp-dl-btn" id="fpCopyBtn">s3://</button>
+      <button class="fp-close" onclick="closeFilePreview()">×</button>
+    </div>
+  </div>
+  <div class="fp-body" id="fpBody"></div>
+</div>
+
+<!-- Help backdrop -->
+<div id="exifBackdrop" style="display:none;position:fixed;inset:0;z-index:299;background:rgba(0,0,0,0.5);" onclick="closeExifPanel()"></div>
+
+<div id="exifPanel" class="exif-panel">
+  <div class="exif-header">
+    <span class="exif-title">image info</span>
+    <button class="exif-close" onclick="closeExifPanel()">×</button>
+  </div>
+  <div id="exifContent" class="exif-content"></div>
+</div>
+
+<div id="helpBackdrop" onclick="toggleHelp()"></div>
+
+<!-- Help drawer -->
+<div id="helpDrawer">
+  <div class="help-header">
+    <span class="help-header-title">BucketLens help</span>
+    <button class="help-close" onclick="toggleHelp()">×</button>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">keyboard shortcuts</div>
+    <hr class="help-divider">
+    <div class="help-kv">
+      <span class="k">/</span><span>focus search</span>
+      <span class="k">G</span><span>toggle grid / list</span>
+      <span class="k">Ctrl+A</span><span>select all files</span>
+      <span class="k">Ctrl+C</span><span>copy S3 URIs of selected</span>
+      <span class="k">← →</span><span>lightbox: prev / next</span>
+      <span class="k">ESC</span><span>clear selection / close</span>
+      <span class="k">?</span><span>toggle this panel</span>
+    </div>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">features</div>
+    <hr class="help-divider">
+    <div class="help-feature-row">
+      <div class="help-feature-name">search</div>
+      <div class="help-feature-desc">press / to filter files by name<br>no S3 API calls — instant client-side</div>
+    </div>
+    <div class="help-feature-row">
+      <div class="help-feature-name">copy URI</div>
+      <div class="help-feature-desc">hover any image → click s3://<br>copies s3://bucket/key to clipboard</div>
+    </div>
+    <div class="help-feature-row">
+      <div class="help-feature-name">group by</div>
+      <div class="help-feature-desc">grid view → group by date or size<br>today / yesterday / this week / older</div>
+    </div>
+    <div class="help-feature-row">
+      <div class="help-feature-name">sort</div>
+      <div class="help-feature-desc">list view → sort by name, size, date</div>
+    </div>
+    <div class="help-feature-row">
+      <div class="help-feature-name">download</div>
+      <div class="help-feature-desc">select files → ⬇ Download<br>streams as ZIP, nothing saved to disk</div>
+    </div>
+    <div class="help-feature-row">
+      <div class="help-feature-name">share</div>
+      <div class="help-feature-desc">hover image → share<br>generates time-limited presigned URL<br>1h · 8h · 24h · 7d expiry options</div>
+    </div>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">S3 cost awareness</div>
+    <hr class="help-divider">
+    <div class="help-cost-card">every image view = 1 S3 GET request
+156 thumbnails in grid = 156 GET requests
+
+GET pricing (us-east-1):
+$0.0004 per 1,000 requests
+$0.09 per GB data transfer
+
+tips to reduce cost:
+→ use folders to browse subsets
+→ search before scrolling
+→ list view has zero image fetches
+→ size slider = fewer renders</div>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">thumbnail cache</div>
+    <hr class="help-divider">
+    <pre id="cacheStats" style="font-family:var(--code); font-size:12px; color:var(--text-secondary)">loading...</pre>
+    <button onclick="clearThumbnailCache()" class="btn btn-sm" style="margin-top:8px; background:var(--danger); color:#fff; border:none; padding:4px 12px; border-radius:var(--radius); cursor:pointer; font-size:12px;">clear cache</button>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">how it works</div>
+    <hr class="help-divider">
+    <div class="help-para">Images are never saved to disk. Flask proxies S3 bytes in 8KB chunks to your browser. RAM is freed after each response. Thumbnails are cached on disk for repeat visits.</div>
+    <pre class="help-diagram">S3 → Flask → resize → cache → browser
+     ↑                    ↑
+8KB chunks          400×400 JPEG
+                    on disk</pre>
+  </div>
+
+  <div class="help-section">
+    <div class="help-section-title">self-hosting</div>
+    <hr class="help-divider">
+    <div class="help-para">Running this for a team? See the deployment guide:<br><a href="https://bucketlens.com/deploy.html" class="help-link" target="_blank" rel="noopener">bucketlens.com/deploy.html</a></div>
+    <div class="help-para">Until auth ships, protect with:</div>
+    <ul class="help-list">
+      <li>nginx basic auth</li>
+      <li>Tailscale (recommended)</li>
+      <li>VPN-only access</li>
+    </ul>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+let helpOpen = false;
+const $helpDrawer = document.getElementById('helpDrawer');
+const $helpBackdrop = document.getElementById('helpBackdrop');
+
+function toggleHelp() {
+  helpOpen = !helpOpen;
+  $helpDrawer.style.transform = helpOpen ? 'translateX(0)' : 'translateX(100%)';
+  $helpBackdrop.style.display = helpOpen ? 'block' : 'none';
+  if (helpOpen) loadCacheStats();
+}
+
+// ── Download cost warning ──────────────────────────────────────────────────
+const $downloadCostModal = document.getElementById('downloadCostModal');
+const $downloadCostMsg   = document.getElementById('downloadCostMsg');
+
+function downloadWithWarning() {
+  const selectedObjs = [...selectedKeys].map(k =>
+    currentObjects.find(o => o.key === k)
+  ).filter(Boolean);
+
+  const totalBytes = selectedObjs.reduce((sum, o) => sum + (o.size || 0), 0);
+
+  if (totalBytes > 104857600) {
+    const totalGB = totalBytes / 1073741824;
+    const estimatedCost = (totalGB * 0.09).toFixed(4);
+    $downloadCostMsg.textContent =
+      `downloading ${formatSize(totalBytes)}\n(~$${estimatedCost} in S3 data transfer costs)`;
+    $downloadCostModal.classList.add('open');
+  } else {
+    downloadSelected();
+  }
+}
+
+function closeDownloadCostModal() {
+  $downloadCostModal.classList.remove('open');
+}
+
+function proceedDownload() {
+  closeDownloadCostModal();
+  downloadSelected();
+}
+
+// ── Large-grid cost hint ───────────────────────────────────────────────────
+const $costHintBanner = document.getElementById('costHintBanner');
+const $costHintMsg    = document.getElementById('costHintMsg');
+let   _costHintKey    = null;
+
+function checkCostHint() {
+  const bucket = typeof currentBucket !== 'undefined' ? currentBucket : null;
+  const prefix = typeof currentPrefix !== 'undefined' ? currentPrefix : '';
+  const count  = typeof browsableObjects !== 'undefined' ? browsableObjects.length : 0;
+
+  if (!bucket || count <= 200) { hideCostHint(); return; }
+
+  _costHintKey = `bl_cost_hint_${bucket}_${prefix}`;
+  if (localStorage.getItem(_costHintKey)) return;
+
+  $costHintMsg.textContent =
+    `⚡ ${count} images in view — each thumbnail is one S3 GET request. ` +
+    `Use search or folders to browse a subset.`;
+  $costHintBanner.style.display = 'flex';
+}
+
+function hideCostHint() {
+  $costHintBanner.style.display = 'none';
+}
+
+function dismissCostHint() {
+  hideCostHint();
+  if (_costHintKey) localStorage.setItem(_costHintKey, '1');
+}
+
+// Watch objectCount text — fires after each loadObjects render
+new MutationObserver(checkCostHint).observe(
+  document.getElementById('objectCount'),
+  { childList: true, characterData: true, subtree: true }
+);
+
+// Intercept '?' in capture phase so app.js bubble-phase handler does not fire
+document.addEventListener('keydown', function(e) {
+  if (e.key !== '?') return;
+  const tag = document.activeElement ? document.activeElement.tagName : '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  e.stopImmediatePropagation();
+  toggleHelp();
+}, true);
+</script>
+</body>
+</html>
