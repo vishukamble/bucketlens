@@ -49,6 +49,15 @@ const $searchInput = document.getElementById("searchInput");
 // ── Init ──
 (function init() { initProvider(); })();
 
+// ── Event delegation for card clicks (C4: prevents XSS via inline onclick) ──
+$content.addEventListener('click', e => {
+  const card = e.target.closest('[data-action]');
+  if (!card) return;
+  const key = card.dataset.key;
+  if (card.dataset.action === 'open') handleCardClick(e, key);
+  if (card.dataset.action === 'select') toggleSelect(key);
+});
+
 $sortFieldEl.addEventListener("change", () => {
   sortField = $sortFieldEl.value;
   renderContent(currentFolders, currentObjects);
@@ -77,10 +86,18 @@ $searchInput.addEventListener("input", e => {
 
 async function loadBuckets() {
   try {
-    const resp = await fetch(`/api/buckets?provider=${enc(currentProvider)}`);
+    let url, listKey;
+    if (currentProvider === 'azure') {
+      url = '/api/azure/containers';
+      listKey = 'containers';
+    } else {
+      url = '/api/buckets';
+      listKey = 'buckets';
+    }
+    const resp = await fetch(url);
     const data = await resp.json();
     if (data.error) { showToast(data.error, "error"); return; }
-    data.buckets.forEach(b => {
+    (data[listKey] || []).forEach(b => {
       const opt = document.createElement("option");
       opt.value = b; opt.textContent = b;
       $bucket.appendChild(opt);
@@ -96,7 +113,7 @@ $bucket.addEventListener("change", () => {
   currentPrefix = "";
   selectedKeys.clear();
   if (currentBucket) {
-    $uploadBtn.style.display = "";
+    $uploadBtn.style.display = currentProvider === "aws" ? "" : "none";
     if (localStorage.getItem("bl_seen_bucket_" + currentBucket)) {
       loadObjects();
     } else {
@@ -225,7 +242,13 @@ async function loadObjects() {
   $searchInput.value = "";
   showLoading();
   try {
-    const resp = await fetch(`/api/objects?bucket=${enc(currentBucket)}&prefix=${enc(currentPrefix)}&provider=${enc(currentProvider)}`);
+    let objectsUrl;
+    if (currentProvider === 'azure') {
+      objectsUrl = `/api/azure/objects?container=${enc(currentBucket)}&prefix=${enc(currentPrefix)}`;
+    } else {
+      objectsUrl = `/api/objects?bucket=${enc(currentBucket)}&prefix=${enc(currentPrefix)}`;
+    }
+    const resp = await fetch(objectsUrl);
     const data = await resp.json();
     if (data.error) { showToast(data.error, "error"); return; }
 
@@ -343,24 +366,24 @@ function renderContent(folders, objects) {
 function buildCardHtml(obj) {
   const fname = obj.key.split("/").pop();
   if (obj.browsable) {
-    const src = `/api/object?bucket=${enc(currentBucket)}&key=${enc(obj.key)}&provider=${enc(currentProvider)}`;
+    const src = objectUrl(currentBucket, obj.key);
     const sel = selectedKeys.has(obj.key) ? "selected" : "";
     if (obj.media_type === "video") {
-      return `<div class="card ${sel}" data-key="${esc(obj.key)}" onclick="handleCardClick(event, '${esc(obj.key)}')">
+      return `<div class="card ${sel}" data-key="${esc(obj.key)}" data-action="open">
         <video src="${src}" muted preload="metadata"></video>
-        <div class="card-checkbox" onclick="event.stopPropagation(); toggleSelect('${esc(obj.key)}')">${selectedKeys.has(obj.key) ? "✓" : ""}</div>
+        <div class="card-checkbox" data-key="${esc(obj.key)}" data-action="select">${selectedKeys.has(obj.key) ? "✓" : ""}</div>
         <div class="card-overlay">🎬 ${esc(fname)}</div>
-        <button class="card-share" onclick="event.stopPropagation(); openShareModal('${esc(obj.key)}')">share</button>
+        <button class="card-share" style="display:none" onclick="event.stopPropagation(); openShareModal('${esc(obj.key)}')">share</button>
         <button class="card-copy" onclick="event.stopPropagation(); copyS3URI('${esc(obj.key)}')">s3://</button>
       </div>`;
     } else {
-      return `<div class="card ${sel}" data-key="${esc(obj.key)}" onclick="handleCardClick(event, '${esc(obj.key)}')">
+      return `<div class="card ${sel}" data-key="${esc(obj.key)}" data-action="open">
         <img src="${src}" loading="lazy" alt="${esc(fname)}">
-        <div class="card-checkbox" onclick="event.stopPropagation(); toggleSelect('${esc(obj.key)}')">${selectedKeys.has(obj.key) ? "✓" : ""}</div>
+        <div class="card-checkbox" data-key="${esc(obj.key)}" data-action="select">${selectedKeys.has(obj.key) ? "✓" : ""}</div>
         <div class="card-overlay">${esc(fname)}</div>
-        <button class="card-share" onclick="event.stopPropagation(); openShareModal('${esc(obj.key)}')">share</button>
+        <button class="card-share" style="display:none" onclick="event.stopPropagation(); openShareModal('${esc(obj.key)}')">share</button>
         <button class="card-copy" onclick="event.stopPropagation(); copyS3URI('${esc(obj.key)}')">s3://</button>
-        <button class="card-info" onclick="event.stopPropagation(); openExifPanel('${esc(obj.key)}')">i</button>
+        <button class="card-info" style="display:none" onclick="event.stopPropagation(); openExifPanel('${esc(obj.key)}')">i</button>
       </div>`;
     }
   } else {
@@ -434,16 +457,16 @@ function renderList(folders, objects) {
     const fname = obj.key.split("/").pop();
     const isMedia = obj.media_type === "image" || obj.media_type === "video";
     const thumb = isMedia
-      ? `<img class="thumb" src="/api/object?bucket=${enc(currentBucket)}&key=${enc(obj.key)}&provider=${enc(currentProvider)}" loading="lazy">`
+      ? `<img class="thumb" src="${objectUrl(currentBucket, obj.key)}" loading="lazy">`
       : `<span class="list-file-icon">${esc(fileTypeIcon(obj.key))}</span>`;
-    html += `<div class="list-row" onclick="handleCardClick(event, '${esc(obj.key)}')">
+    html += `<div class="list-row" data-key="${esc(obj.key)}" data-action="open">
       ${thumb}
       <span class="name">${esc(fname)}</span>
       <span class="meta">${formatSize(obj.size)}</span>
       <span class="meta">${new Date(obj.last_modified).toLocaleDateString()}</span>
       ${fileTypeBadge(obj.key)}
       <div style="display:flex;gap:4px">
-        <button class="card-share" style="opacity:1;position:static" onclick="event.stopPropagation(); openShareModal('${esc(obj.key)}')">share</button>
+        <button class="card-share" style="display:none;opacity:1;position:static" onclick="event.stopPropagation(); openShareModal('${esc(obj.key)}')">share</button>
         <button class="card-copy" style="opacity:1;position:static" onclick="event.stopPropagation(); copyS3URI('${esc(obj.key)}')">s3://</button>
       </div>
     </div>`;
@@ -510,10 +533,10 @@ function toggleSelect(key) {
 
 function updateSelectionBtns() {
   const n = selectedKeys.size;
-  $deleteBtn.style.display = n ? "" : "none";
-  $downloadBtn.style.display = n ? "" : "none";
+  const isAws = currentProvider === "aws";
+  $deleteBtn.style.display = n && isAws ? "" : "none";
+  $downloadBtn.style.display = "none"; // hidden until /api/download-zip is implemented
   if (n) $deleteBtn.textContent = `🗑 Delete (${n})`;
-  if (n) $downloadBtn.textContent = `⬇ Download (${n})`;
 }
 
 function handleCardClick(event, key) {
@@ -534,7 +557,7 @@ function openLightbox(index) {
   if (index < 0 || index >= mediaObjects.length) return;
   lightboxIndex = index;
   const obj = mediaObjects[index];
-  const src = `/api/object?bucket=${enc(currentBucket)}&key=${enc(obj.key)}&provider=${enc(currentProvider)}`;
+  const src = objectUrl(currentBucket, obj.key);
   const fname = obj.key.split("/").pop();
 
   if (obj.media_type === "video") {
@@ -755,13 +778,54 @@ const PROVIDER_SETUP = {
 };
 
 // ── Provider modal ──
-function initProvider() {
-  const stored = localStorage.getItem("bl_provider");
-  if (stored) {
-    currentProvider = stored;
-    updateProviderPill();
-    loadBuckets();
-  } else {
+async function initProvider() {
+  try {
+    const resp = await fetch('/api/providers');
+    const data = await resp.json();
+    const available = (data.providers || []).filter(p => p !== 'gcp');
+
+    const stored = localStorage.getItem('bl_provider');
+    if (stored && data.providers.includes(stored)) {
+      // Stored provider is valid — skip selection
+      currentProvider = stored;
+      $providerModal.remove();
+      updateProviderPill();
+      loadBuckets();
+      return;
+    } else if (stored) {
+      // Stored provider no longer available — clear it
+      localStorage.removeItem('bl_provider');
+    }
+
+    if (available.length === 1) {
+      // Single provider — skip selection, go straight in
+      currentProvider = available[0];
+      localStorage.setItem("bl_provider", currentProvider);
+      $providerModal.remove();
+      updateProviderPill();
+      loadBuckets();
+      return;
+    }
+
+    // Multiple providers — show only available cards
+    document.querySelectorAll(".provider-btn").forEach(btn => {
+      const id = btn.id.replace("btn-", "");
+      if (!available.includes(id)) {
+        btn.style.display = "none";
+      }
+    });
+    openProviderModal();
+  } catch {
+    // Backend unreachable — fall back to stored or show all non-GCP cards
+    const stored = localStorage.getItem('bl_provider');
+    if (stored) {
+      currentProvider = stored;
+      $providerModal.remove();
+      updateProviderPill();
+      loadBuckets();
+      return;
+    }
+    document.getElementById("btn-gcp").style.display = "none";
     openProviderModal();
   }
 }
@@ -776,6 +840,10 @@ function openProviderModal() {
 }
 
 function selectProvider(name) {
+  if (name === 'gcp') {
+    showToast("GCP support coming soon", "error");
+    return;
+  }
   currentProvider = name;
   document.querySelectorAll(".provider-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("btn-" + name).classList.add("active");
@@ -790,9 +858,10 @@ async function checkHealth() {
   $credActions.style.display = "none";
 
   try {
-    const resp = await fetch(`/api/health?provider=${enc(currentProvider)}`);
+    const url = currentProvider === 'azure' ? '/api/azure/containers' : '/api/buckets';
+    const resp = await fetch(url);
     const data = await resp.json();
-    if (data.ok) {
+    if (!data.error) {
       $credStatus.className = "cred-status cred-ok";
       $credStatus.textContent = "✓ Credentials detected";
       $credActions.innerHTML = `<button class="btn btn-primary" onclick="closeProviderModal()">Continue →</button>`;
@@ -814,6 +883,7 @@ async function checkHealth() {
 function closeProviderModal() {
   localStorage.setItem("bl_provider", currentProvider);
   $providerModal.classList.remove("open");
+  $providerModal.remove();
   updateProviderPill();
   loadBuckets();
 }
@@ -838,14 +908,14 @@ function switchProvider() {
 }
 
 function updateProviderPill() {
+  const labels = { aws: 'AWS S3', azure: 'Azure', gcp: 'GCP' };
   if (currentProvider) {
-    $providerPill.textContent = currentProvider.toUpperCase();
+    $providerPill.textContent = labels[currentProvider] || currentProvider.toUpperCase();
     $providerPill.style.display = "inline-block";
-    $switchProviderBtn.style.display = "inline-block";
   } else {
     $providerPill.style.display = "none";
-    $switchProviderBtn.style.display = "none";
   }
+  $switchProviderBtn.style.display = "none";
 }
 
 // ── Setup sub-modal ──
@@ -994,7 +1064,7 @@ function cancelBucketInfo() {
 function openFilePreview(key) {
   const fname = key.split("/").pop();
   const ext = fname.toLowerCase().split('.').pop();
-  const dlUrl = `/api/object?bucket=${enc(currentBucket)}&key=${enc(key)}&download=1&provider=${enc(currentProvider)}`;
+  const dlUrl = objectUrl(currentBucket, key, true);
   const s3uri = `s3://${currentBucket}/${key}`;
 
   const modal = document.getElementById("filePreviewModal");
@@ -1006,8 +1076,28 @@ function openFilePreview(key) {
   modal.classList.add("open");
   document.body.style.overflow = "hidden";
 
-  fetch(`/api/preview?bucket=${enc(currentBucket)}&key=${enc(key)}&provider=${enc(currentProvider)}`)
+  const previewUrl = currentProvider === 'azure'
+    ? `/api/azure/object?container=${enc(currentBucket)}&key=${enc(key)}`
+    : `/api/preview?bucket=${enc(currentBucket)}&key=${enc(key)}`;
+  fetch(previewUrl)
     .then(async r => {
+      if (currentProvider === 'azure') {
+        if (!r.ok) {
+          document.getElementById("fpBody").innerHTML =
+            `<div class="fp-error">failed to load preview<br><br>
+            <a href="${dlUrl}" class="fp-dl-link">Download file instead →</a></div>`;
+          return;
+        }
+        const text = await r.text();
+        if (ext === 'csv') {
+          document.getElementById("fpBody").innerHTML = renderCsvTable(text);
+        } else {
+          document.getElementById("fpBody").innerHTML =
+            `<pre class="fp-code"><code>${esc(text)}</code></pre>`;
+        }
+        return;
+      }
+
       const data = await r.json();
       if (!r.ok) {
         if (r.status === 413) {
@@ -1061,6 +1151,16 @@ function closeFilePreview() {
 // ── Helpers ──
 function enc(s) { return encodeURIComponent(s); }
 function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function objectUrl(bucket, key, download) {
+  if (currentProvider === 'azure') {
+    let url = `/api/azure/object?container=${enc(bucket)}&key=${enc(key)}`;
+    if (download) url += '&download=1';
+    return url;
+  }
+  let url = `/api/object?bucket=${enc(bucket)}&key=${enc(key)}`;
+  if (download) url += '&download=1';
+  return url;
+}
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
@@ -1121,7 +1221,7 @@ function renderExifPanel(data) {
   const size = formatSize(data.file_size);
   const dims = `${data.width} × ${data.height}`;
   const modified = data.last_modified ? new Date(data.last_modified).toLocaleString() : "—";
-  const src = `/api/object?bucket=${enc(currentBucket)}&key=${enc(data.key)}&provider=${enc(currentProvider)}`;
+  const src = objectUrl(currentBucket, data.key);
 
   let html = `<div class="exif-thumb-wrap"><img src="${src}" class="exif-thumb" alt="${esc(fname)}"></div>`;
 
@@ -1173,7 +1273,7 @@ function renderExifPanel(data) {
   html += `<div class="exif-actions">
     <button class="btn btn-sm" onclick="copyS3URI('${esc(data.key)}')">copy uri</button>
     <button class="btn btn-sm" onclick="openShareModal('${esc(data.key)}')">share</button>
-    <a class="btn btn-sm" href="/api/object?bucket=${enc(currentBucket)}&key=${enc(data.key)}&provider=${enc(currentProvider)}&download=1" download="${esc(fname)}">download</a>
+    <a class="btn btn-sm" href="${objectUrl(currentBucket, data.key, true)}" download="${esc(fname)}">download</a>
   </div>`;
 
   document.getElementById("exifContent").innerHTML = html;

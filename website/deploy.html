@@ -20,8 +20,8 @@
     --danger: #ff2d55;
     --warning: #ffb800;
     --text-primary: #e8e8ff;
-    --text-secondary: #7878aa;
-    --text-muted: #444466;
+    --text-secondary: #9898bb;
+    --text-muted: #7878aa;
     --mono: 'JetBrains Mono', monospace;
     --code: 'Fira Code', monospace;
     --radius: 8px;
@@ -299,10 +299,8 @@
 <section>
   <div class="section-inner">
     <div class="section-title">single user — the simple case</div>
-    <div class="code-block"><span class="comment">git clone https://github.com/vishukamble/bucketlens</span>
-<span class="comment">cd bucketlens</span>
-<span class="comment">pip install flask boto3</span>
-<span class="comment">python app.py</span>
+    <div class="code-block"><span class="cmd">pip install bucketlens</span>
+<span class="cmd">bucketlens</span>
 <span class="comment"># → http://127.0.0.1:8080</span></div>
   </div>
 </section>
@@ -316,15 +314,15 @@
     <div class="code-block" style="margin-bottom:40px"><span class="comment"># server requirements</span>
 <span class="key">python 3.8+</span>
 <span class="key">nginx or caddy</span>
-<span class="key">aws credentials or IAM role on the server</span></div>
+<span class="key">cloud provider credentials (aws · azure · gcp)</span></div>
 
     <!-- Step 1 -->
     <div class="step-row">
       <div class="step-num-badge">01</div>
       <div class="step-content">
         <div class="step-heading">clone and install</div>
-        <div class="code-block-full">git clone https://github.com/vishukamble/bucketlens /opt/bucketlens
-cd /opt/bucketlens && pip install flask boto3</div>
+        <div class="code-block-full">pip install bucketlens
+<span class="comment"># for Azure: pip install bucketlens azure-storage-blob azure-identity</span></div>
       </div>
     </div>
 

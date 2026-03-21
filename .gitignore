@@ -208,10 +208,13 @@ __marimo__/
 
 # Claude Code
 .claude/
-HANDOFF.md
 prompt.txt
 prompt
 
 # BucketLens runtime files
 bucketlens_audit.db
 bucketlens_audit.log
+
+# BucketLens build-time generated copies (synced by Makefile, not committed)
+bucketlens/templates/
+bucketlens/static/

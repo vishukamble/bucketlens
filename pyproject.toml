@@ -1,0 +1,34 @@
+# To publish: pip install build twine && python -m build && twine upload dist/*
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bucketlens"
+version = "0.1.4"
+description = "Browse AWS S3, Azure Blob, and GCP Cloud Storage like a file explorer"
+readme = "README.md"
+license = {text = "AGPL-3.0"}
+requires-python = ">=3.8"
+dependencies = ["flask>=2.0"]
+
+[project.optional-dependencies]
+aws = ["boto3"]
+azure = ["azure-storage-blob", "azure-identity"]
+gcp = ["google-cloud-storage"]
+all = ["boto3", "azure-storage-blob", "azure-identity", "google-cloud-storage"]
+
+[project.scripts]
+bucketlens = "bucketlens.cli:main"
+
+[project.urls]
+Homepage = "https://bucketlens.com"
+Repository = "https://github.com/vishukamble/bucketlens"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bucketlens*"]
+
+[tool.setuptools.package-data]
+"bucketlens" = ["templates/**/*", "static/**/*", "providers/**/*"]
